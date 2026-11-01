@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>My Hisab</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);--bg:#f5f6f8;--card:#fff;--tx:#1b1f24;--mu:#6b7280;--bd:#e3e6ea;--pr:#2563eb;--gr:#16a34a;--rd:#dc2626}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#111418;--card:#1b2027;--tx:#e8ebef;--mu:#9aa3ad;--bd:#2c333c;--pr:#5b8cf5;--gr:#34d27b;--rd:#f26b6b}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#111418;--card:#1b2027;--tx:#e8ebef;--mu:#9aa3ad;--bd:#2c333c;--pr:#5b8cf5;--gr:#34d27b;--rd:#f26b6b}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:560px;margin:auto;padding:12px 12px 84px}
+h1{font-size:20px;margin:6px 0 12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.k{font-size:12px;color:var(--mu)}.v{font-size:19px;font-weight:700;margin-top:2px}
+.g{color:var(--gr)}.r{color:var(--rd)}
+nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--bd);display:flex;padding-bottom:env(safe-area-inset-bottom,0px);max-width:560px;margin:auto}
+nav button{flex:1;border:0;background:none;color:var(--mu);padding:12px 2px;font-size:13px}
+nav button.on{color:var(--pr);font-weight:700}
+input,select,textarea,button.b{width:100%;padding:11px;margin:5px 0;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);font-size:16px}
+button.b{background:var(--pr);color:#fff;border:0;font-weight:700}
+button.s{background:none;border:1px solid var(--bd);color:var(--tx);border-radius:8px;padding:6px 10px;font-size:12px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--bd)}
+.row:last-child{border:0}.sm{font-size:12px;color:var(--mu)}
+.seg{display:flex;gap:6px}.seg button{flex:1;padding:10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx)}
+.seg button.on{background:var(--pr);color:#fff;border-color:var(--pr)}
+.bar{height:8px;border-radius:4px;background:var(--bd);overflow:hidden;margin-top:4px}.bar i{display:block;height:100%;background:var(--rd)}
+</style></head><body>
+<h1 id="ttl">💰 My Hisab</h1>
+<div id="st" class="sm" style="margin:-6px 0 10px"></div><div id="app"></div>
+<nav id="nav"></nav>
+<script>
+var D={tx:[],loans:[]},tab='home',tType='expense',lType='given',month=new Date().toISOString().slice(0,7);
+var CAT={income:['Salary','Business','Sales','Gift','Other'],expense:['Food','Transport','Bills','Rent','Shopping','Health','Education','Other']};
+function load(){try{var s=localStorage.getItem('hisab_v1');if(s)D=JSON.parse(s)}catch(e){}}
+var cdoc=null,timer=null,chain=Promise.resolve(),status='Saved on this phone only';
+function ui(){var e=document.getElementById('st');if(e)e.textContent=status}
+function save(){D.updated=Date.now();try{localStorage.setItem('hisab_v1',JSON.stringify(D))}catch(e){}if(cdoc){clearTimeout(timer);timer=setTimeout(push,700)}}
+function push(){if(!cdoc)return;status='Syncing...';ui();chain=chain.then(function(){return cdoc.set({data:JSON.stringify(D)})}).then(function(){status='Synced to your account';ui()}).catch(function(){status='Cloud sync failed (still saved on this phone)';ui()})}
+function cur(){return (D.cfg&&D.cfg.cur)||'৳'}
+function cats(t){return (D.cfg&&D.cfg[t=='income'?'inc':'exp'])||CAT[t]}
+function ttl(){var e=document.getElementById('ttl'),t=(D.cfg&&D.cfg.title)||'My Hisab';if(e)e.textContent='💰 '+t;document.title=t}
+function m(n){return cur()+(Math.round(n*100)/100).toLocaleString('en-IN')}
+function today(){return new Date().toISOString().slice(0,10)}
+function sum(a,f){return a.filter(f).reduce(function(s,x){return s+x.amt},0)}
+function esc(s){return String(s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function nav(){var t=[['home','Home'],['add','Add'],['loans','Loans'],['report','Report'],['more','Settings']];
+document.getElementById('nav').innerHTML=t.map(function(x){return '<button class="'+(tab==x[0]?'on':'')+'" onclick="go(\''+x[0]+'\')">'+x[1]+'</button>'}).join('')}
+function go(t){tab=t;render()}
+var intro=true;
+function enter(){intro=false;render();window.scrollTo(0,0)}
+function introHtml(){var t=(D.cfg&&D.cfg.title)||'My Hisab',f=[['📈','Profit & Loss','See every month at a glance'],['🧾','Income & Expenses','Track by category with notes'],['🤝','Loans','Who owes you, whom you owe, part payments'],['🔒','Private & Safe','Your data stays yours, with backup']];
+return '<div style="text-align:center;padding:28px 6px 8px"><div style="font-size:64px">💰</div><h2 style="font-size:28px;margin:8px 0 4px">'+esc(t)+'</h2><div class="sm" style="font-size:15px">Your personal accounting, simple and professional</div></div><div class="card" style="margin-top:18px">'+f.map(function(x){return '<div class="row" style="justify-content:flex-start;gap:14px"><div style="font-size:26px">'+x[0]+'</div><div><b>'+x[1]+'</b><div class="sm">'+x[2]+'</div></div></div>'}).join('')+'</div><button class="b" style="font-size:18px;padding:15px" onclick="enter()">Enter</button>'}
+function render(){var H=document.getElementById('ttl');if(H)H.style.display=intro?'none':'';if(intro){document.getElementById('nav').innerHTML='';ui();ttl();document.getElementById('app').innerHTML=introHtml();return}
+nav();ui();ttl();var h='';
+if(tab=='home')h=home();else if(tab=='add')h=add();else if(tab=='loans')h=loans();else if(tab=='report')h=report();else h=more();
+document.getElementById('app').innerHTML=h}
+function stats(mo){var T=D.tx.filter(function(x){return !mo||x.date.slice(0,7)==mo});
+var inc=sum(T,function(x){return x.type=='income'}),exp=sum(T,function(x){return x.type=='expense'});return {inc:inc,exp:exp,net:inc-exp}}
+function loanSt(){var g=0,t=0;D.loans.forEach(function(l){var left=l.amt-l.paid;if(l.type=='given')g+=left;else t+=left});return {g:g,t:t}}
+function home(){var s=stats(month),a=stats(),l=loanSt();
+return '<div class="card"><div class="k">This month ('+month+')</div><div class="grid" style="margin-top:8px"><div><div class="k">Income</div><div class="v g">'+m(s.inc)+'</div></div><div><div class="k">Expense</div><div class="v r">'+m(s.exp)+'</div></div></div><div style="margin-top:10px" class="k">'+(s.net>=0?'Profit':'Loss')+'</div><div class="v '+(s.net>=0?'g':'r')+'">'+m(Math.abs(s.net))+'</div></div>'+
+'<div class="grid"><div class="card"><div class="k">Total balance</div><div class="v '+(a.net>=0?'g':'r')+'">'+m(a.net)+'</div></div><div class="card"><div class="k">Loans: I get / I owe</div><div class="v"><span class="g">'+m(l.g)+'</span> / <span class="r">'+m(l.t)+'</span></div></div></div>'+
+'<div class="card"><b>Recent</b>'+(D.tx.length?D.tx.slice().sort(function(a,b){return b.date<a.date?-1:1}).slice(0,8).map(txRow).join(''):'<div class="sm" style="padding:10px 0">No entries yet. Tap Add.</div>')+'</div>'}
+function txRow(x){return '<div class="row"><div><div>'+esc(x.cat)+(x.note?' · '+esc(x.note):'')+'</div><div class="sm">'+x.date+'</div></div><div style="text-align:right"><div class="'+(x.type=='income'?'g':'r')+'"><b>'+(x.type=='income'?'+':'-')+m(x.amt)+'</b></div><button class="s" onclick="delTx('+x.id+')">Delete</button></div></div>'}
+function add(){return '<div class="card"><div class="seg"><button class="'+(tType=='expense'?'on':'')+'" onclick="tType=\'expense\';render()">Expense</button><button class="'+(tType=='income'?'on':'')+'" onclick="tType=\'income\';render()">Income</button></div>'+
+'<input id="a" type="number" inputmode="decimal" placeholder="Amount"><select id="c">'+cats(tType).map(function(c){return '<option>'+c+'</option>'}).join('')+'</select><input id="n" placeholder="Note (optional)"><input id="d" type="date" value="'+today()+'"><button class="b" onclick="addTx()">Save</button></div>'}
+function addTx(){var a=parseFloat(document.getElementById('a').value);if(!(a>0)){alert('Enter a valid amount');return}
+D.tx.push({id:Date.now(),type:tType,amt:a,cat:document.getElementById('c').value,note:document.getElementById('n').value,date:document.getElementById('d').value||today()});save();tab='home';render()}
+function delTx(id){if(confirm('Delete this entry?')){D.tx=D.tx.filter(function(x){return x.id!=id});save();render()}}
+function loans(){var l=loanSt();
+return '<div class="card"><div class="seg"><button class="'+(lType=='given'?'on':'')+'" onclick="lType=\'given\';render()">I gave</button><button class="'+(lType=='taken'?'on':'')+'" onclick="lType=\'taken\';render()">I took</button></div>'+
+'<input id="lp" placeholder="Person name"><input id="la" type="number" inputmode="decimal" placeholder="Amount"><input id="ld" type="date" value="'+today()+'"><button class="b" onclick="addLoan()">Add loan</button></div>'+
+'<div class="grid"><div class="card"><div class="k">I will get</div><div class="v g">'+m(l.g)+'</div></div><div class="card"><div class="k">I must pay</div><div class="v r">'+m(l.t)+'</div></div></div>'+
+'<div class="card">'+(D.loans.length?D.loans.map(function(x){var left=x.amt-x.paid;return '<div class="row"><div><div>'+esc(x.who)+' <span class="sm">('+(x.type=='given'?'owes me':'I owe')+')</span></div><div class="sm">'+x.date+' · total '+m(x.amt)+' · paid '+m(x.paid)+'</div></div><div style="text-align:right"><b class="'+(x.type=='given'?'g':'r')+'">'+m(left)+'</b><div>'+(left>0?'<button class="s" onclick="pay('+x.id+')">Payment</button> ':'<span class="sm">Settled</span> ')+'<button class="s" onclick="delLoan('+x.id+')">✕</button></div></div></div>'}).join(''):'<div class="sm">No loans yet.</div>')+'</div>'}
+function addLoan(){var w=document.getElementById('lp').value.trim(),a=parseFloat(document.getElementById('la').value);if(!w||!(a>0)){alert('Enter name and amount');return}
+D.loans.push({id:Date.now(),type:lType,who:w,amt:a,paid:0,date:document.getElementById('ld').value||today()});save();render()}
+function pay(id){var l=D.loans.filter(function(x){return x.id==id})[0],v=parseFloat(prompt('Payment amount (remaining '+(l.amt-l.paid)+')'));if(v>0){l.paid=Math.min(l.amt,l.paid+v);save();render()}}
+function delLoan(id){if(confirm('Delete this loan?')){D.loans=D.loans.filter(function(x){return x.id!=id});save();render()}}
+function report(){var s=stats(month),cats={},T=D.tx.filter(function(x){return x.type=='expense'&&x.date.slice(0,7)==month});
+T.forEach(function(x){cats[x.cat]=(cats[x.cat]||0)+x.amt});var keys=Object.keys(cats).sort(function(a,b){return cats[b]-cats[a]});
+var months={};D.tx.forEach(function(x){var k=x.date.slice(0,7);months[k]=months[k]||{i:0,e:0};if(x.type=='income')months[k].i+=x.amt;else months[k].e+=x.amt});
+var mk=Object.keys(months).sort().reverse();
+return '<div class="card"><input type="month" value="'+month+'" onchange="month=this.value||month;render()"><div class="grid" style="margin-top:6px"><div><div class="k">Income</div><div class="v g">'+m(s.inc)+'</div></div><div><div class="k">Expense</div><div class="v r">'+m(s.exp)+'</div></div></div><div class="k" style="margin-top:8px">'+(s.net>=0?'Profit':'Loss')+'</div><div class="v '+(s.net>=0?'g':'r')+'">'+m(Math.abs(s.net))+'</div></div>'+
+'<div class="card"><b>Expense by category</b>'+(keys.length?keys.map(function(k){return '<div style="margin-top:10px"><div class="row" style="padding:0;border:0"><span>'+k+'</span><b>'+m(cats[k])+'</b></div><div class="bar"><i style="width:'+Math.round(cats[k]/s.exp*100)+'%"></i></div></div>'}).join(''):'<div class="sm" style="padding-top:8px">No expenses this month.</div>')+'</div>'+
+'<div class="card"><b>All months</b>'+(mk.length?mk.map(function(k){var n=months[k].i-months[k].e;return '<div class="row"><span>'+k+'</span><span class="'+(n>=0?'g':'r')+'"><b>'+(n>=0?'Profit ':'Loss ')+m(Math.abs(n))+'</b></span></div>'}).join(''):'<div class="sm" style="padding-top:8px">No data.</div>')+'</div>'}
+function more(){var c=D.cfg||{};return '<div class="card"><b>Customize</b><input id="ct" placeholder="Website name" value="'+esc(c.title||'My Hisab')+'"><input id="cc" placeholder="Currency symbol" value="'+esc(cur())+'"><div class="sm">Income categories (comma separated)</div><textarea id="ci" rows="2">'+esc(cats('income').join(', '))+'</textarea><div class="sm">Expense categories (comma separated)</div><textarea id="ce" rows="3">'+esc(cats('expense').join(', '))+'</textarea><button class="b" onclick="saveCfg()">Save settings</button></div><div class="card"><b>Backup your data</b><p class="sm">Your data lives only in this browser. Copy the backup text and save it somewhere safe (Notes, WhatsApp to yourself).</p><button class="b" onclick="doCopy()">Copy backup</button><textarea id="bk" rows="5" placeholder="Paste backup here to restore"></textarea><button class="b" style="background:var(--gr)" onclick="doRestore()">Restore from pasted backup</button></div>'}
+function saveCfg(){function L(id){return document.getElementById(id).value.split(',').map(function(x){return x.trim()}).filter(Boolean)}var i=L('ci'),e=L('ce');if(!i.length||!e.length){alert('Add at least one category each');return}D.cfg={title:document.getElementById('ct').value.trim()||'My Hisab',cur:document.getElementById('cc').value.trim()||'৳',inc:i,exp:e};save();alert('Saved');render()}
+function doCopy(){var t=JSON.stringify(D),ta=document.getElementById('bk');ta.value=t;ta.select();try{navigator.clipboard.writeText(t).then(function(){alert('Copied!')},function(){document.execCommand('copy');alert('Copied!')})}catch(e){try{document.execCommand('copy');alert('Copied!')}catch(e2){alert('Select the text and copy it manually')}}}
+function doRestore(){try{var o=JSON.parse(document.getElementById('bk').value);if(!o.tx||!o.loans)throw 0;if(confirm('Replace current data with backup?')){D=o;save();tab='home';render()}}catch(e){alert('Invalid backup text')}}
+load();render();
+(async function(){try{
+var u=await claude.use('user'),db=await claude.use('db');
+if(!u||!db){status='Saved on this phone only (open while signed in to claude.ai for cloud save)';ui();return}
+var id=await u.id();if(!id){status='Saved on this phone only';ui();return}
+var doc=db.collection('data/users/'+id).doc('hisab');
+var snap=await doc.get();cdoc=doc;
+if(snap.exists&&snap.data()&&snap.data().data){var c=JSON.parse(snap.data().data);
+if((c.updated||0)>=(D.updated||0)){D=c;try{localStorage.setItem('hisab_v1',JSON.stringify(D))}catch(e){}status='Synced to your account';ui();render();return}}
+if((D.tx&&D.tx.length)||(D.loans&&D.loans.length))push();else{status='Synced to your account';ui()}
+}catch(e){status='Cloud save unavailable (still saved on this phone)';ui()}})();
+</script></body></html>
